@@ -53,8 +53,24 @@ a,
   border-radius: 2rem;
 }
 
+.contents {
+  margin-top: 0;
+  padding-top: 0;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.contents > li:first-child {
+  margin-top: 0;
+  padding-top: 0;
+}
+
 .contents li {
-  margin-left: 0;
+  margin-left: .5rem;
+}
+
+.contents li > ul li {
+  margin-left: 0rem;
 }
 
 .navbar {

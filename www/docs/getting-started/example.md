@@ -5,7 +5,7 @@ title: Example
 
 ## Example with live demo
 
-The easiest way to get started is to clone the example Next.js application from the [next-auth-example](https://github.com/iaincollins/next-auth-example) repository and to the instructions in the [README](https://github.com/iaincollins/next-auth-example/blob/master/README.md).
+The easiest way to get started is to clone the example Next.js application from the [next-auth-example](https://github.com/iaincollins/next-auth-example) repository and to the instructions in the [README](https://github.com/iaincollins/next-auth-example/blob/main/README.md).
 
 You can find a live demo of the example project at [next-auth-example.now.sh](https://next-auth-example.now.sh)
 
@@ -24,7 +24,7 @@ import Providers from 'next-auth/providers'
 const options = {
   site: process.env.SITE || 'http://localhost:3000',
 
-  // configure one or more authentication providers
+  // Configure one or more authentication providers
   providers: [
     Providers.GitHub({
       clientId: process.env.GITHUB_ID,
@@ -32,11 +32,8 @@ const options = {
     }),
   ],
 
-  // database is optional, but required to persist accounts in a database
+  // A database is optional, but required to persist accounts in a database
   database: process.env.DATABASE_URL,
-
-  // control who can sign in - allows access control even without a database
-  allowSignin: async (user, account) => { return true }
 }
 
 export default (req, res) => NextAuth(req, res, options)

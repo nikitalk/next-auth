@@ -1,5 +1,5 @@
 ---
-id: adapter
+id: adapters
 title: Database Adapters
 ---
 
@@ -40,7 +40,7 @@ adapter: Adapters.Default({
 ```
 
 ```javascript
-adapter: Adapters.TypeORM({
+adapter: Adapters.TypeORM.Adapter({
   type: 'sqlite',
   database: ':memory:',
   synchronize: true
