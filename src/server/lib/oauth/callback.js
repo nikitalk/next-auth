@@ -1,8 +1,8 @@
-import { createHash } from "crypto";
-import querystring from "querystring";
-import jwtDecode from "jwt-decode";
-import oAuthClient from "./client";
-import logger from "../../../lib/logger";
+import { createHash } from 'crypto';
+import querystring from 'querystring';
+import jwtDecode from 'jwt-decode';
+import oAuthClient from './client';
+import logger from '../../../lib/logger';
 
 // @TODO Refactor monkey patching in _getOAuthAccessToken() and _get()
 // These methods have been forked from `node-oauth` to fix bugs; it may make
@@ -18,27 +18,27 @@ export default async (req, provider, csrfToken, callback) => {
   let { oauth_token, oauth_verifier, code, user, state } = req.query; // eslint-disable-line camelcase
   const client = oAuthClient(provider);
 
-  if (provider.version && provider.version.startsWith("2.")) {
+  if (provider.version && provider.version.startsWith('2.')) {
     // For OAuth 2.0 flows, check state returned and matches expected value
     // (a hash of the NextAuth.js CSRF token).
     //
     // This check can be disabled for providers that do not support it by
     // setting `state: false` as a option on the provider (defaults to true).
     if (
-      !Object.prototype.hasOwnProperty.call(provider, "state") ||
+      !Object.prototype.hasOwnProperty.call(provider, 'state') ||
       provider.state === true
     ) {
-      const expectedState = createHash("sha256")
+      const expectedState = createHash('sha256')
         .update(csrfToken)
-        .digest("hex");
+        .digest('hex');
       if (state !== expectedState) {
         return callback(
-          new Error("Invalid state returned from oAuth provider")
+          new Error('Invalid state returned from oAuth provider')
         );
       }
     }
 
-    if (req.method === "POST") {
+    if (req.method === 'POST') {
       try {
         const body = JSON.parse(JSON.stringify(req.body));
         if (body.error) {
@@ -49,7 +49,7 @@ export default async (req, provider, csrfToken, callback) => {
         user = body.user != null ? JSON.parse(body.user) : null;
       } catch (e) {
         logger.error(
-          "OAUTH_CALLBACK_HANDLER_ERROR",
+          'OAUTH_CALLBACK_HANDLER_ERROR',
           e,
           req.body,
           provider.id,
@@ -60,7 +60,7 @@ export default async (req, provider, csrfToken, callback) => {
     }
 
     // Pass authToken in header by default (unless 'useAuthTokenHeader: false' is set)
-    if (Object.prototype.hasOwnProperty.call(provider, "useAuthTokenHeader")) {
+    if (Object.prototype.hasOwnProperty.call(provider, 'useAuthTokenHeader')) {
       client.useAuthorizationHeaderforGET(provider.useAuthTokenHeader);
     } else {
       client.useAuthorizationHeaderforGET(true);
@@ -75,7 +75,7 @@ export default async (req, provider, csrfToken, callback) => {
       (error, accessToken, refreshToken, results) => {
         if (error || results.error) {
           logger.error(
-            "OAUTH_GET_ACCESS_TOKEN_ERROR",
+            'OAUTH_GET_ACCESS_TOKEN_ERROR',
             error,
             results,
             provider.id,
@@ -137,12 +137,12 @@ export default async (req, provider, csrfToken, callback) => {
     // Handle oAuth v1.x
     await client.getOAuthAccessToken(
       oauth_token,
-      null,
+      req.cookies['next-auth.tokensecret'],
       oauth_verifier,
       (error, accessToken, refreshToken, results) => {
         // @TODO Handle error
         if (error || results.error) {
-          logger.error("OAUTH_V1_GET_ACCESS_TOKEN_ERROR", error, results);
+          logger.error('OAUTH_V1_GET_ACCESS_TOKEN_ERROR', error, results);
         }
 
         client.get(
@@ -180,13 +180,13 @@ async function _getProfile(
 ) {
   // @TODO Handle error
   if (error) {
-    logger.error("OAUTH_GET_PROFILE_ERROR", error);
+    logger.error('OAUTH_GET_PROFILE_ERROR', error);
   }
 
   let profile = {};
   try {
     // Convert profileData into an object if it's a string
-    if (typeof profileData === "string" || profileData instanceof String) {
+    if (typeof profileData === 'string' || profileData instanceof String) {
       profileData = JSON.parse(profileData);
     }
 
@@ -195,7 +195,7 @@ async function _getProfile(
       profileData.user = userData;
     }
 
-    logger.debug("PROFILE_DATA", profileData);
+    logger.debug('PROFILE_DATA', profileData);
 
     // If an email exists only in raw response
     if (provider.getEmailFromRawResponse) {
@@ -204,7 +204,7 @@ async function _getProfile(
       profileData = q;
     }
 
-    console.log("pd=", profileData);
+    console.log('pd=', profileData);
     profile = await provider.profile(profileData);
   } catch (exception) {
     // If we didn't get a response either there was a problem with the provider
@@ -214,7 +214,7 @@ async function _getProfile(
     // all providers, so we return an empty object; the user should then be
     // redirected back to the sign up page. We log the error to help developers
     // who might be trying to debug this when configuring a new provider.
-    logger.error("OAUTH_PARSE_PROFILE_ERROR", exception, profileData);
+    logger.error('OAUTH_PARSE_PROFILE_ERROR', exception, profileData);
     return {
       profile: null,
       account: null,
@@ -251,7 +251,7 @@ async function _getOAuthAccessToken(code, provider, callback) {
   const params = { ...provider.params } || {};
   const headers = { ...provider.headers } || {};
   const codeParam =
-    params.grant_type === "refresh_token" ? "refresh_token" : "code";
+    params.grant_type === 'refresh_token' ? 'refresh_token' : 'code';
 
   if (!params[codeParam]) {
     params[codeParam] = code;
@@ -277,13 +277,13 @@ async function _getOAuthAccessToken(code, provider, callback) {
     params.redirect_uri = provider.callbackUrl;
   }
 
-  if (!headers["Content-Type"]) {
-    headers["Content-Type"] = "application/x-www-form-urlencoded";
+  if (!headers['Content-Type']) {
+    headers['Content-Type'] = 'application/x-www-form-urlencoded';
   }
 
   // Added as a fix to accomodate change in Twitch oAuth API
-  if (!headers["Client-ID"]) {
-    headers["Client-ID"] = provider.clientId;
+  if (!headers['Client-ID']) {
+    headers['Client-ID'] = provider.clientId;
   }
 
   // Okta errors when this is set. Maybe there are other Providers that also wont like this.
@@ -296,14 +296,14 @@ async function _getOAuthAccessToken(code, provider, callback) {
   const postData = querystring.stringify(params);
 
   this._request(
-    "POST",
+    'POST',
     url,
     headers,
     postData,
     null,
     (error, data, response) => {
       if (error) {
-        logger.error("OAUTH_GET_ACCESS_TOKEN_ERROR", error, data, response);
+        logger.error('OAUTH_GET_ACCESS_TOKEN_ERROR', error, data, response);
         return callback(error);
       }
 
@@ -336,22 +336,22 @@ function _get(provider, accessToken, callback) {
 
     // Mail.ru requires 'access_token' as URL request parameter
     if (provider.setGetAccessTokenProfileUrl)
-      url += "?access_token=" + accessToken;
+      url += '?access_token=' + accessToken;
 
     if (provider.apiVersionProfileUrl)
-      url += "&v=" + provider.apiVersionProfileUrl;
+      url += '&v=' + provider.apiVersionProfileUrl;
 
     // This line is required for Twitch
-    headers["Client-ID"] = provider.clientId;
+    headers['Client-ID'] = provider.clientId;
     accessToken = null;
   }
 
-  this._request("GET", url, headers, null, accessToken, callback);
+  this._request('GET', url, headers, null, accessToken, callback);
 }
 
 function _decodeToken(provider, accessToken, refreshToken, idToken, callback) {
   if (!idToken) {
-    throw new Error("Missing JWT ID Token", provider, idToken);
+    throw new Error('Missing JWT ID Token', provider, idToken);
   }
   const decodedToken = jwtDecode(idToken);
   const profileData = JSON.stringify(decodedToken);

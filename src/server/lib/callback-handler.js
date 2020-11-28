@@ -8,18 +8,22 @@
 // All verification (e.g. oAuth flows or email address verificaiton flows) are
 // done prior to this handler being called to avoid additonal complexity in this
 // handler.
-import { AccountNotLinkedError } from '../../lib/errors'
-import dispatchEvent from '../lib/dispatch-event'
+import { AccountNotLinkedError } from '../../lib/errors';
+import dispatchEvent from '../lib/dispatch-event';
 
 export default async (sessionToken, profile, providerAccount, options) => {
   try {
     // Input validation
-    if (!profile) { throw new Error('Missing profile') }
-    if (!providerAccount || !providerAccount.id || !providerAccount.type) { throw new Error('Missing or invalid provider account') }
+    if (!profile) {
+      throw new Error('Missing profile');
+    }
+    if (!providerAccount || !providerAccount.id || !providerAccount.type) {
+      throw new Error('Missing or invalid provider account');
+    }
 
-    const { adapter, jwt, events } = options
+    const { adapter, jwt, events } = options;
 
-    const useJwtSession = options.session.jwt
+    const useJwtSession = options.session.jwt;
 
     // If no adapter is configured then we don't have a database and cannot
     // persist data; in this mode we just return a dummy session object.
@@ -27,8 +31,8 @@ export default async (sessionToken, profile, providerAccount, options) => {
       return {
         user: profile,
         account: providerAccount,
-        session: {}
-      }
+        session: {},
+      };
     }
 
     const {
@@ -40,37 +44,39 @@ export default async (sessionToken, profile, providerAccount, options) => {
       linkAccount,
       createSession,
       getSession,
-      deleteSession
-    } = await adapter.getAdapter(options)
+      deleteSession,
+    } = await adapter.getAdapter(options);
 
-    let session = null
-    let user = null
-    let isSignedIn = null
-    let isNewUser = false
+    let session = null;
+    let user = null;
+    let isSignedIn = null;
+    let isNewUser = false;
 
     if (sessionToken) {
       if (useJwtSession) {
         try {
-          session = await jwt.decode({ ...jwt, token: sessionToken })
+          session = await jwt.decode({ ...jwt, token: sessionToken });
           if (session && session.user) {
-            user = await getUser(session.user.id)
-            isSignedIn = !!user
+            user = await getUser(session.user.id);
+            isSignedIn = !!user;
           }
         } catch (e) {
           // If session can't be verified, treat as no session
         }
       } else {
-        session = await getSession(sessionToken)
+        session = await getSession(sessionToken);
         if (session && session.userId) {
-          user = await getUser(session.userId)
-          isSignedIn = !!user
+          user = await getUser(session.userId);
+          isSignedIn = !!user;
         }
       }
     }
 
     if (providerAccount.type === 'email') {
       // If signing in with an email, check if an account with the same email address exists already
-      const userByEmail = profile.email ? await getUserByEmail(profile.email) : null
+      const userByEmail = profile.email
+        ? await getUserByEmail(profile.email)
+        : null;
       if (userByEmail) {
         // If they are not already signed in as the same user, this flow will
         // sign them out of the current session and sign them in as the new user
@@ -79,33 +85,36 @@ export default async (sessionToken, profile, providerAccount, options) => {
             // Delete existing session if they are currently signed in as another user.
             // This will switch user accounts for the session in cases where the user was
             // already logged in with a different account.
-            await deleteSession(sessionToken)
+            await deleteSession(sessionToken);
           }
         }
 
         // Update emailVerified property on the user object
-        const currentDate = new Date()
-        user = await updateUser({ ...userByEmail, emailVerified: currentDate })
-        await dispatchEvent(events.updateUser, user)
+        const currentDate = new Date();
+        user = await updateUser({ ...userByEmail, emailVerified: currentDate });
+        await dispatchEvent(events.updateUser, user);
       } else {
         // Create user account if there isn't one for the email address already
-        const currentDate = new Date()
-        user = await createUser({ ...profile, emailVerified: currentDate })
-        await dispatchEvent(events.createUser, user)
-        isNewUser = true
+        const currentDate = new Date();
+        user = await createUser({ ...profile, emailVerified: currentDate });
+        await dispatchEvent(events.createUser, user);
+        isNewUser = true;
       }
 
       // Create new session
-      session = useJwtSession ? {} : await createSession(user)
+      session = useJwtSession ? {} : await createSession(user);
 
       return {
         session,
         user,
-        isNewUser
-      }
+        isNewUser,
+      };
     } else if (providerAccount.type === 'oauth') {
       // If signing in with oauth account, check to see if the account exists already
-      const userByProviderAccountId = await getUserByProviderAccountId(providerAccount.provider, providerAccount.id)
+      const userByProviderAccountId = await getUserByProviderAccountId(
+        providerAccount.provider,
+        providerAccount.id
+      );
       if (userByProviderAccountId) {
         if (isSignedIn) {
           // If the user is already signed in with this account, we don't need to do anything
@@ -116,23 +125,25 @@ export default async (sessionToken, profile, providerAccount, options) => {
             return {
               session,
               user,
-              isNewUser
-            }
+              isNewUser,
+            };
           } else {
             // If the user is currently signed in, but the new account they are signing in
             // with is already associated with another account, then we cannot link them
             // and need to return an error.
-            throw new AccountNotLinkedError()
+            throw new AccountNotLinkedError();
           }
         } else {
           // If there is no active session, but the account being signed in with is already
           // associated with a valid user then create session to sign the user in.
-          session = useJwtSession ? {} : await createSession(userByProviderAccountId)
+          session = useJwtSession
+            ? {}
+            : await createSession(userByProviderAccountId);
           return {
             session,
             user: userByProviderAccountId,
-            isNewUser
-          }
+            isNewUser,
+          };
         }
       } else {
         if (isSignedIn) {
@@ -146,15 +157,15 @@ export default async (sessionToken, profile, providerAccount, options) => {
             providerAccount.refreshToken,
             providerAccount.accessToken,
             providerAccount.accessTokenExpires
-          )
-          await dispatchEvent(events.linkAccount, { user, providerAccount })
+          );
+          await dispatchEvent(events.linkAccount, { user, providerAccount });
 
           // As they are already signed in, we don't need to do anything after linking them
           return {
             session,
             user,
-            isNewUser
-          }
+            isNewUser,
+          };
         }
 
         // If the user is not signed in and it looks like a new oAuth account then we
@@ -174,8 +185,10 @@ export default async (sessionToken, profile, providerAccount, options) => {
         //
         // oAuth providers should require email address verification to prevent this, but in
         // practice that is not always the case; this helps protect against that.
-        const userByEmail = profile.email ? await getUserByEmail(profile.email) : null
-        if (userByEmail) {
+        const userById = profile.id
+          ? await getUserByProviderAccountId(profile.id)
+          : null;
+        if (userById) {
           // We end up here when we don't have an account with the same [provider].id *BUT*
           // we do already have an account with the same email address as the one in the
           // oAuth profile the user has just tried to sign in with.
@@ -183,7 +196,7 @@ export default async (sessionToken, profile, providerAccount, options) => {
           // We don't want to have two accounts with the same email address, and we don't
           // want to link them in case it's not safe to do so, so instead we prompt the user
           // to sign in via email to verify their identity and then link the accounts.
-          throw new AccountNotLinkedError()
+          throw new AccountNotLinkedError();
         } else {
           // If the current user is not logged in and the profile isn't linked to any user
           // accounts (by email or provider account id)...
@@ -191,8 +204,8 @@ export default async (sessionToken, profile, providerAccount, options) => {
           // If no account matching the same [provider].id or .email exists, we can
           // create a new account for the user, link it to the oAuth acccount and
           // create a new session for them so they are signed in with it.
-          user = await createUser(profile)
-          await dispatchEvent(events.createUser, user)
+          user = await createUser(profile);
+          await dispatchEvent(events.createUser, user);
 
           await linkAccount(
             user.id,
@@ -202,22 +215,22 @@ export default async (sessionToken, profile, providerAccount, options) => {
             providerAccount.refreshToken,
             providerAccount.accessToken,
             providerAccount.accessTokenExpires
-          )
-          await dispatchEvent(events.linkAccount, { user, providerAccount })
+          );
+          await dispatchEvent(events.linkAccount, { user, providerAccount });
 
-          session = useJwtSession ? {} : await createSession(user)
-          isNewUser = true
+          session = useJwtSession ? {} : await createSession(user);
+          isNewUser = true;
           return {
             session,
             user,
-            isNewUser
-          }
+            isNewUser,
+          };
         }
       }
     } else {
-      return Promise.reject(new Error('Provider not supported'))
+      return Promise.reject(new Error('Provider not supported'));
     }
   } catch (error) {
-    return Promise.reject(error)
+    return Promise.reject(error);
   }
-}
+};
