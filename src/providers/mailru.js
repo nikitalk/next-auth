@@ -6,7 +6,7 @@ export default (options) => {
     version: '2.0',
     scope: 'userinfo',
     params: {
-      grant_type: 'authorization_code'
+      grant_type: 'authorization_code',
     },
     accessTokenUrl: 'https://oauth.mail.ru/token',
     requestTokenUrl: 'https://oauth.mail.ru/token',
@@ -18,9 +18,9 @@ export default (options) => {
         name: profile.name,
         email: profile.email,
         image: profile.image,
-      }
+      };
     },
     setGetAccessTokenProfileUrl: true,
-    ...options
-  }
-}
+    ...options,
+  };
+};
