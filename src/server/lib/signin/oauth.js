@@ -2,6 +2,7 @@ import oAuthClient from '../oauth/client';
 import querystring from 'querystring';
 import { createHash } from 'crypto';
 import logger from '../../../lib/logger';
+import { request } from 'http';
 
 export default (provider, csrfToken, callback) => {
   const { callbackUrl, requestTokenUrl, scope } = provider;
@@ -31,7 +32,7 @@ export default (provider, csrfToken, callback) => {
     callback(null, url);
   } else {
     // Handle oAuth v1.x
-    client.getOAuthRequestToken = _getOAuthRequestToken;
+    if (provider.scope) client.getOAuthRequestToken = _getOAuthRequestToken;
     client.getOAuthRequestToken(
       (error, oAuthToken, oAuthTokenSecret) => {
         if (error) {
@@ -49,18 +50,10 @@ export default (provider, csrfToken, callback) => {
 async function _getOAuthRequestToken(callback, extraParams) {
   var requestUrl = extraParams.requestTokenUrl;
   var scopeParams = '';
-  var defaultScopes = ['profile_r', 'email_r'];
-  if (extraParams.scope) {
-    scopeParams += '?scope=' + extraParams.scope;
-    delete extraParams.scope;
-    for (var i in defaultScopes) {
-      if (scopeParams.search(defaultScopes[i]) === -1) {
-        scopeParams += '+' + defaultScopes[i];
-      }
-    }
-  } else if (!extraParams.scope) {
-    scopeParams += defaultScopes.join('+');
-  }
+
+  if (extraParams.scope)
+    scopeParams += '?scope=' + extraParams.scope.replace(/\s/g, '+');
+
   requestUrl += scopeParams;
 
   // Callbacks are 1.0A related (sme as oauth-node)
